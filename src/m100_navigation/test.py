@@ -1,12 +1,14 @@
 import rospy
-import dji_sdk
+from dji_sdk.msg import MissionWaypoint, MissionWaypointTask 
+from dji_sdk.srv import SetLocalPosRef, MissionWpUpload, SDKControlAuthority
 from sensor_msgs.msg import Joy
 from enum import Enum
 
 class dji_m100_commands():
     
-    def __init__(self, nh):
-
+    def __init__(self):
+	
+	rospy.init_node('dji_m100_commands')
         # PUB
         self.generic_pub = rospy.Publisher('/dji_sdk/flight_control_setpoint_generic', Joy)
         self.enu_pos_yaw_pub = rospy.Publisher('/dji_sdk/flight_control_setpoint_ENUposition_yaw', Joy)
@@ -14,9 +16,9 @@ class dji_m100_commands():
         self.roll_pitch_yaw_rate_height_pub = rospy.Publisher('/dji_sdk/flight_control_setpoint_rollpitch_yawrate_zposition', Joy)
 
         # SERVICES
-        self.set_local_pos_ref = rospy.ServiceProxy('/dji_sdk/set_local_pos_ref', dji_sdk.srv.SetLocalPosRef)
-        self.waypoint_task_upload = rospy.ServiceProxy('/dji_sdk/mission_waypoint_upload', dji_sdk.srv.MissionWaypointTask)
-        self.toggle_control_authority = rospy.ServiceProxy('/dji_sdk/sdk_control_authority', dji_sdk.srv.SDKControlAuthority)
+        self.set_local_pos_ref = rospy.ServiceProxy('/dji_sdk/set_local_pos_ref', SetLocalPosRef)
+        self.waypoint_task_upload = rospy.ServiceProxy('/dji_sdk/mission_waypoint_upload', MissionWpUpload)
+        self.toggle_control_authority = rospy.ServiceProxy('/dji_sdk/sdk_control_authority', SDKControlAuthority)
         
 
     def setpoint_generic(self, a0, a1, a2, a3, flag):
@@ -42,11 +44,11 @@ class dji_m100_commands():
 
     def setpoint_FRUposition_yaw(self, x, y, z, yaw):
         """ Command the X, Y position offset, Z position (height) and yaw angle in FRU ground frame """
-        flag = (Flags.HORIZONTAL_POSITION |
-                Flags.VERTICAL_POSITION   |
-                Flags.YAW_ANGLE           |
-                Flags.HORIZONTAL_BODY     |
-                Flags.STABLE_ENABLE) 
+        flag = (int(Flags.HORIZONTAL_POSITION) |
+                int(Flags.VERTICAL_POSITION)   |
+                int(Flags.YAW_ANGLE)           |
+                int(Flags.HORIZONTAL_BODY)     |
+                int(Flags.STABLE_ENABLE)) 
         self.setpoint_generic(x, y, z, yaw, flag)
     
     def setpoint_ENUposition_yaw(self, x, y, z, yaw):
@@ -62,15 +64,17 @@ class dji_m100_commands():
         self.roll_pitch_yaw_rate_height_pub.publish(Joy([roll, pitch, height, d_yaw]))
 
     def set_local_position(self):
-        local_pos_ref_req = dji_sdk.srv.SetLocalPosRef()
+        local_pos_ref_req = SetLocalPosRef()
         response = self.set_local_pos_ref.call(local_pos_ref_req)
         return response.result
 
     def upload_waypoints(self, waypoints, **kwargs):
-        request = dji_sdk.msg.MissionWaypointTask(**kwargs)
-        waypoint = dji_sdk.msg.MissionWaypoint()
-        request.mission_waypoint = [waypoint]
-        response = self.waypoint_task_upload(request)
+        request = MissionWpUpload()
+	task = MissionWaypointTask(**kwargs)
+        waypoint = MissionWaypoint()
+        task.mission_waypoint = [waypoint]
+        request.waypoin_task = task
+	response = self.waypoint_task_upload(request)
         return response.result
 
     def toggle_control_authority(self, control_enable):
@@ -157,4 +161,5 @@ class M100FlightStatus(Enum):
     M100_STATUS_FINISHED_LANDING = 5
 
 if __name__ == "__main__":
-    pass
+    cmd = dji_m100_commands()
+    cmd.setpoint_FRUposition_yaw(1, 1, 1, 0)
