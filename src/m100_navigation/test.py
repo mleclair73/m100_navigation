@@ -7,8 +7,7 @@ from enum import Enum
 class dji_m100_commands():
     
     def __init__(self):
-	
-	rospy.init_node('dji_m100_commands')
+	    rospy.init_node('dji_m100_commands')
         # PUB
         self.generic_pub = rospy.Publisher('/dji_sdk/flight_control_setpoint_generic', Joy)
         self.enu_pos_yaw_pub = rospy.Publisher('/dji_sdk/flight_control_setpoint_ENUposition_yaw', Joy)
@@ -20,7 +19,6 @@ class dji_m100_commands():
         self.waypoint_task_upload = rospy.ServiceProxy('/dji_sdk/mission_waypoint_upload', MissionWpUpload)
         self.toggle_control_authority = rospy.ServiceProxy('/dji_sdk/sdk_control_authority', SDKControlAuthority)
         
-
     def setpoint_generic(self, a0, a1, a2, a3, flag):
         """ 
             General setpoint where axes[0] to axes[3] stores set-point data for the 2
@@ -80,8 +78,9 @@ class dji_m100_commands():
     def toggle_control_authority(self, control_enable):
         # RELEASE_CONTROL = 0
         # REQUEST_CONTROL = 1
-        response = self.toggle_control_authority(control_enable)
+        response = self.toggle_authority(control_enable)
         return response.result
+
 
 class Flags(Enum):
     """ Flags options to control setpoint options """
@@ -140,26 +139,16 @@ class Flags(Enum):
     STABLE_DISABLE          = 0x00
     STABLE_ENABLE           = 0x01
 
-
-"""
-enum M100FlightStatus
-{
-  M100_STATUS_ON_GROUND        = DJI::OSDK::VehicleStatus::M100FlightStatus::ON_GROUND_STANDBY,
-  M100_STATUS_TAKINGOFF        = DJI::OSDK::VehicleStatus::M100FlightStatus::TAKEOFF,
-  M100_STATUS_IN_AIR           = DJI::OSDK::VehicleStatus::M100FlightStatus::IN_AIR_STANDBY,
-  M100_STATUS_LANDING          = DJI::OSDK::VehicleStatus::M100FlightStatus::LANDING,
-  M100_STATUS_FINISHED_LANDING = DJI::OSDK::VehicleStatus::M100FlightStatus::FINISHING_LANDING
-};
-
-"""
-
 class M100FlightStatus(Enum):
-    M100_STATUS_ON_GROUND        = 1
-    M100_STATUS_TAKINGOFF        = 2
-    M100_STATUS_IN_AIR           = 3
-    M100_STATUS_LANDING          = 4
-    M100_STATUS_FINISHED_LANDING = 5
+    ON_GROUND_STANDBY  = 1
+    TAKEOFF            = 2
+    IN_AIR_STANDBY     = 3
+    LANDING            = 4 
+    FINISHING_LANDING  = 5
 
 if __name__ == "__main__":
-    cmd = dji_m100_commands()
-    cmd.setpoint_FRUposition_yaw(1, 1, 1, 0)
+    try:
+        cmd = dji_m100_commands()
+        cmd.setpoint_FRUposition_yaw(0,0,10,0)
+    except rospy.ROSInterruptException:
+        pass
